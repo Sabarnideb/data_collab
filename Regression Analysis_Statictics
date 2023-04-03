@@ -1,0 +1,152 @@
+#install specific version of libraries used in lab
+! mamba install pandas==1.3.3
+! mamba install numpy=1.21.2
+! mamba install scipy=1.7.1-y
+! mamba install seaborn=0.9.0-y
+!  mamba install matplotlib=3.4.3-y
+!  mamba install statsmodels=0.12.0-y
+
+import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+import requests
+import json 
+pip list
+pip install js
+pip install piplite
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import scipy.stats
+
+import requests
+import io
+
+URL = 'https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBMDeveloperSkillsNetwork-ST0151EN-SkillsNetwork/labs/teachingratings.csv'
+resp = requests.get(URL)
+ratings_url =  io.StringIO(resp.content.decode('utf-8'))
+
+ratings_df = pd.read_csv(ratings_url)
+
+###Regression with T-test: Using the teachers rating data set, does gender affect teaching evaluation rates?
+#We will state the null hypothesis:
+#𝐻_0:β1 = 0 (Gender has no effect on teaching evaluation scores)
+#𝐻_1:β1 is not equal to 0 (Gender has an effect on teaching evaluation scores)
+# We will use the female variable. female = 1 and male = 0
+
+## X is the input variables (or independent variables)
+X = ratings_df['female']
+## y is the target/dependent variable
+y = ratings_df['eval']
+## add an intercept (beta_0) to our model
+X = sm.add_constant(X) 
+
+model = sm.OLS(y, X).fit()
+predictions = model.predict(X)
+
+# Print out the statistics
+model.summary()
+
+###Regression with ANOVA: Using the teachers' rating data set, does beauty score for instructors differ by age?
+##State the Hypothesis:
+
+#𝐻_0:µ1=µ2=µ3 (the three population means are equal)
+#𝐻_1: At least one of the means differ
+
+#grouping by age
+ratings_df.loc[(ratings_df['age'] <= 40), 'age_group'] = '40 years and younger'
+ratings_df.loc[(ratings_df['age'] > 40)&(ratings_df['age'] < 57), 'age_group'] = 'between 40 and 57 years'
+ratings_df.loc[(ratings_df['age'] >= 57), 'age_group'] = '57 years and older'
+
+from statsmodels.formula.api import ols
+lm = ols('beauty ~ age_group', data = ratings_df).fit()
+table= sm.stats.anova_lm(lm)
+print(table)
+
+#Regression with ANOVA option 2
+Create dummy variables - A dummy variable is a numeric variable that represents categorical data, such as gender, race, etc. Dummy variables are dichotomous, 
+i.e they can take on only two quantitative values.
+
+X = pd.get_dummies(ratings_df[['age_group']])
+y = ratings_df['beauty']
+## add an intercept (beta_0) to our model
+X = sm.add_constant(X) 
+
+model = sm.OLS(y, X).fit()
+predictions = model.predict(X)
+
+# Print out the statistics
+model.summary()
+
+###Correlation: Using the teachers' rating dataset, Is teaching evaluation score correlated with beauty score?
+
+## X is the input variables (or independent variables)
+X = ratings_df['beauty']
+## y is the target/dependent variable
+y = ratings_df['eval']
+## add an intercept (beta_0) to our model
+X = sm.add_constant(X) 
+
+model = sm.OLS(y, X).fit()
+predictions = model.predict(X)
+
+# Print out the statistics
+model.summary()
+
+###Question 1: Using the teachers' rating data set, does tenure affect beauty scores?
+Use α = 0.05
+
+#State Hypothesis
+Null Hypothesis: Mean beauty scores for tenured and non-tenured instructors are equal Alternative Hypothesis: There is a difference in mean beauty scores for tenured 
+and non-tenured instructors
+X = pd.get_dummies(ratings_df[['tenured_prof']])
+y = ratings_df['beauty']
+## add an intercept (beta_0) to our model
+X = sm.add_constant(X) 
+
+model = sm.OLS(y, X).fit()
+predictions = model.predict(X)
+
+# Print out the statistics
+model.summary()
+
+
+###Question 2: Using the teachers' rating data set, does being an English speaker affect the number of students assigned to professors?
+Use "allstudents"
+Use α = 0.05 and α = 0.1
+
+##State Hypothesis
+Null Hypothesis: Mean number of students assigned to native English speakers vs non-native English speakers are equal Alternative Hypothesis: There is a difference in mean number of students assigned to native 
+English speakers vs non-native English speakers
+## X is the input variables (or independent variables)
+X = ratings_df['English_speaker']
+## y is the target/dependent variable
+y = ratings_df['allstudents']
+## add an intercept (beta_0) to our model
+X = sm.add_constant(X) 
+
+model = sm.OLS(y, X).fit()
+predictions = model.predict(X)
+
+# Print out the statistics
+model.summary()
+
+##Question 3: Using the teachers' rating data set, what is the correlation between the number of students who participated in 
+the evaluation survey and evaluation scores?
+Use "students" variable
+
+## X is the input variables (or independent variables)
+X = ratings_df['eval']
+## y is the target/dependent variable
+y = ratings_df['students']
+## add an intercept (beta_0) to our model
+X = sm.add_constant(X) 
+
+model = sm.OLS(y, X).fit()
+predictions = model.predict(X)
+
+# Print out the statistics
+model.summary()
+
