@@ -1,0 +1,164 @@
+#install specific version of libraries used in lab
+! mamba install pandas==1.3.3
+! mamba install numpy=1.21.2
+! mamba install scipy=1.7.1-y
+! mamba install seaborn=0.9.0-y
+!  mamba install matplotlib=3.4.3-y
+!  mamba install statsmodels=0.12.0-y
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import scipy.stats
+import requests
+import json
+
+import requests
+import io
+
+url = 'https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBMDeveloperSkillsNetwork-ST0151EN-SkillsNetwork/labs/teachingratings.csv'
+response = requests.get(url)
+data = io.StringIO(response.content.decode('utf-8'))
+
+ratings_df = pd.read_csv(ratings_url)
+
+###Lab Exercises
+#T-Test: Using the teachers' rating data set, does gender affect teaching evaluation rates?
+#We will be using the t-test for independent samples. For the independent t-test, the following assumptions must be met.
+
+#One independent, categorical variable with two levels or group
+#One dependent continuous variable
+#Independence of the observations. Each subject should belong to only one group. There is no relationship between the observations in each group.
+#The dependent variable must follow a normal distribution
+#Assumption of homogeneity of variance
+
+#State the hypothesis
+
+𝐻0:µ1=µ2("there is no difference in evaluation scores between male and females")
+𝐻1:µ1≠µ2("there is a difference in evaluation scores between male and females")
+
+# We can plot the dependent variable with a historgram
+ax = sns.distplot(ratings_df['eval'],
+                  bins=20,
+                  kde=True,
+                  color='red',
+                  hist_kws={"linewidth": 15,'alpha':1})
+ax.set(xlabel='Normal Distribution', ylabel='Frequency')
+## we can assume it is normal
+
+#We can use the Levene's Test in Python to check test significance
+scipy.stats.levene(ratings_df[ratings_df['gender'] == 'female']['eval'],
+                   ratings_df[ratings_df['gender'] == 'male']['eval'], center='mean')
+
+# since the p-value is greater than 0.05 we can assume equality of variance
+
+
+#Use the ttest_ind from the scipy_stats library
+scipy.stats.ttest_ind(ratings_df[ratings_df['gender'] == 'female']['eval'],
+                   ratings_df[ratings_df['gender'] == 'male']['eval'], equal_var = True)
+                   
+###ANOVA: Using the teachers' rating data set, does beauty score for instructors differ by age?
+First, we group the data into cateries as the one-way ANOVA can't work with continuous variable - using the example from the video, 
+we will create a new column for this newly assigned group our categories will be teachers that are:
+40 years and younger, between 40 and 57 years, 57 years and older.
+
+ratings_df.loc[(ratings_df['age'] <= 40), 'age_group'] = '40 years and younger'
+ratings_df.loc[(ratings_df['age'] > 40)&(ratings_df['age'] < 57), 'age_group'] = 'between 40 and 57 years'
+ratings_df.loc[(ratings_df['age'] >= 57), 'age_group'] = '57 years and older'
+
+State the hypothesis
+
+𝐻0:µ1=µ2=µ3 ("the three population means are equal")
+𝐻1: Atleast one of them differ
+
+#Test for equality of variance
+scipy.stats.levene(ratings_df[ratings_df['age_group'] == '40 years and younger']['beauty'],
+                   ratings_df[ratings_df['age_group'] == 'between 40 and 57 years']['beauty'], 
+                   ratings_df[ratings_df['age_group'] == '57 years and older']['beauty'], 
+                   center='mean')
+#First, separate the three samples (one for each job category) into a variable each.
+forty_lower = ratings_df[ratings_df['age_group'] == '40 years and younger']['beauty']
+forty_fiftyseven = ratings_df[ratings_df['age_group'] == 'between 40 and 57 years']['beauty']
+fiftyseven_older = ratings_df[ratings_df['age_group'] == '57 years and older']['beauty']
+
+f_statistic, p_value = scipy.stats.f_oneway(forty_lower, forty_fiftyseven, fiftyseven_older)
+print("F_Statistic: {0}, P-Value: {1}".format(f_statistic,p_value))
+
+###ANOVA: Using the teachers' rating data set, does teaching evaluation score for instructors differ by age?
+Test for equality of variance
+
+scipy.stats.levene(ratings_df[ratings_df['age_group'] == '40 years and younger']['eval'],
+                   ratings_df[ratings_df['age_group'] == 'between 40 and 57 years']['eval'], 
+                   ratings_df[ratings_df['age_group'] == '57 years and older']['eval'], 
+                   center='mean')
+forty_lower_eval = ratings_df[ratings_df['age_group'] == '40 years and younger']['eval']
+forty_fiftyseven_eval = ratings_df[ratings_df['age_group'] == 'between 40 and 57 years']['eval']
+fiftyseven_older_eval = ratings_df[ratings_df['age_group'] == '57 years and older']['eval']
+
+f_statistic, p_value = scipy.stats.f_oneway(forty_lower_eval, forty_fiftyseven_eval, fiftyseven_older_eval)
+print("F_Statistic: {0}, P-Value: {1}".format(f_statistic,p_value))
+
+###Chi-square: Using the teachers' rating data set, is there an association between tenure and gender?
+State the hypothesis:
+
+𝐻0: The proportion of teachers who are tenured is independent of gender
+𝐻1: The proportion of teachers who are tenured is associated with gender
+
+#Create a Cross-tab table
+cont_table  = pd.crosstab(ratings_df['tenure'], ratings_df['gender'])
+cont_table
+scipy.stats.chi2_contingency(cont_table, correction = True)
+
+##Correlation: Using the teachers rating dataset, Is teaching evaluation score correlated with beauty score?
+State the hypothesis: 𝐻0:𝑇𝑒𝑎𝑐ℎ𝑖𝑛𝑔𝑒𝑣𝑎𝑙𝑢𝑎𝑡𝑖𝑜𝑛𝑠𝑐𝑜𝑟𝑒𝑖𝑠𝑛𝑜𝑡𝑐𝑜𝑟𝑟𝑒𝑙𝑎𝑡𝑒𝑑𝑤𝑖𝑡ℎ𝑏𝑒𝑎𝑢𝑡𝑦𝑠𝑐𝑜𝑟𝑒
+H_1:Teaching evaluation score is correlated with beauty score
+
+Since they are both continuous variables we can use a pearson correlation test and draw a scatter plot
+
+ax = sns.scatterplot(x="beauty", y="eval", data=ratings_df)
+
+scipy.stats.pearsonr(ratings_df['beauty'], ratings_df['eval'])
+###Question 1: Using the teachers rating data set, does tenure affect teaching evaluation scores?
+
+scipy.stats.ttest_ind(ratings_df[ratings_df['tenure'] == 'yes']['eval'],
+                   ratings_df[ratings_df['tenure'] == 'no']['eval'], equal_var = True)
+                   
+###Question 2: Using the teachers rating data set, is there an association between age and tenure?
+Discretize the age into three groups 40 years and youngers, between 40 and 57 years, 57 years and older (This has already been done for you above.)
+What is your conclusion at α = 0.01 and α = 0.05?
+State the hypothesis
+𝐻_0: There is no association between age and tenure
+𝐻_1: There is an association between age and tenure
+
+# first we group the data by age
+ratings_df.loc[(ratings_df['age'] <= 40), 'age_group'] = '40 years and younger'
+ratings_df.loc[(ratings_df['age'] > 40)&(ratings_df['age'] < 57), 'age_group'] = 'between 40 and 57 years'
+ratings_df.loc[(ratings_df['age'] >= 57), 'age_group'] = '57 years and older'
+
+cont_table  = pd.crosstab(ratings_df['tenure'], ratings_df['age'])
+cont_table
+
+scipy.stats.chi2_contingency(cont_table, correction = True)
+
+###Question 3: Test for equality of variance for beauty scores between tenured and non-tenured instructors?
+Use α = 0.05
+State the Hypothesis
+
+𝐻_0: There is equality of variance of both groups
+
+𝐻_1: There is no equality of variance of both groups
+
+scipy.stats.levene(ratings_df[ratings_df['tenure'] == 'yes']['beauty'],
+                   ratings_df[ratings_df['tenure'] == 'no']['beauty'], center='mean')
+###Question 4: Using the teachers rating data set, is there an association between visible minorities and tenure?
+Use α = 0.05
+State the Hypothesis
+
+𝐻_0: There is no association between visible minorities and tenure.
+
+𝐻_1: There is an association between visible minorities and tenure.
+
+cont_table  = pd.crosstab(ratings_df['tenure'], ratings_df['vismin'])
+cont_table
+scipy.stats.chi2_contingency(cont_table, correction = True)
