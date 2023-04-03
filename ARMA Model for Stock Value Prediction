@@ -1,0 +1,162 @@
+pip install yfinance
+pip install statsmodels.tools.sm_exceptions
+pip install pmdarima
+import yfinance as yf
+from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.arima_model import ARIMA
+import pmdarima as pm
+import numpy as np
+import seaborn as sns
+from tqdm import tqdm
+import pandas as pd
+from statsmodels.tools.sm_exceptions import ValueWarning, HessianInversionWarning, ConvergenceWarning
+import warnings
+
+#in practice do not supress these warnings, they carry important information about the status of your data
+warnings.filterwarnings('ignore', category=ValueWarning)
+warnings.filterwarnings('ignore', category=HessianInversionWarning)
+warnings.filterwarnings('ignore', category=ConvergenceWarning)
+import csv
+
+# Open the CSV file
+with open('NSE_data.csv', newline='') as csvfile:
+    # Create a CSV reader object
+    reader = csv.reader(csvfile, delimiter=',')
+    
+    # Loop through each row in the CSV file
+    for row in reader:
+        # Extract the relevant information for the ticker symbol
+        tickersymbol = row[0] + '_' + row[1]
+        
+        # Print the ticker symbol
+        print(tickersymbol)
+ 
+ 
+ 
+import datetime
+start_training= datetime.date(2022,3,2)
+end_training=datetime.date(2023,3,2)
+start_testing=datetime.date(2022,3,2)
+end_testing=datetime.datetime.today()
+tickerSymbol='NSE'
+data=yf.Ticker(tickerSymbol)
+print(data)
+
+
+import pandas as pd
+
+# Read the CSV file into a pandas DataFrame
+df = pd.read_csv('NSE_data.csv')
+
+# Convert the date column to datetime format
+df['Date'] = pd.to_datetime(df['Date'])
+
+# Set the date column as the DataFrame index
+df.set_index('Date', inplace=True)
+
+# Filter the DataFrame based on the desired date range
+start_date = '2022-03-02'
+end_date = '2023-03-02'
+nse_data = df.loc[start_date:end_date]
+
+# Print the filtered DataFrame
+print(nse_data)
+
+
+
+
+
+
+##Training data
+nse_data_training=yf.download(tickerSymbol,start=start_training, end=end_training, progress=False)
+print(f"Download{nse_data_training.shape[0]}rows and {nse_data_training.shape[1]} columns of {tickerSymbol}data")
+
+#Convert daily dataset to weekly dataset
+nse_data=nse_data.resample('W').agg({'Open':'first','High':'max','Low':"min",'Close':'last','Adj Close':'last'})
+
+#Fitting the model
+arima_fit=pm.auto_arima(nse_data['Adj Close'],error_action='ignore',supress_warning=True,stepwise=False,approximate=False, seasonal=False)
+#printing the summary of model
+arima_fit.summary()
+
+#testing data
+nse_data_testing=yf.download(tickerSymbol,start=start_testing, end=end_testing, progress=False)
+print(f"Download{nse_data_testing.shape[0]}rows and {nse_data_testing.shape[1]} columns of {tickerSymbol}data")
+
+nse_data_testing.drop(columns=['Open','High','Low','Close'],inplace=True)
+nse_data_testing.rename(columns={'Adj Close':'adj_close'},inplace=True)
+print(nse_data_testing.head())
+
+
+#Forecast Using testing Data
+n_fcast1=len(nse_data_testing)
+print(n_fcast1)
+
+arima_fcast=arima_fit.predict(n_periods=n_fcast1,return_conf_int=True, alpha=0.05)
+print(arima_fcast)
+
+prediction=pd.DataFrame(arima_fcast[0],columns=['prediction'])
+print(prediction)
+
+pd.DataFrame(arima_fcast[1],columns=['lower_95','upper_95'])
+
+closing_prices = df.loc[:, 'Close']
+closing_pct_changes = closing_prices.pct_change().dropna()
+
+plt.figure(figsize=(10,4))
+plt.plot(closing_prices)
+plt.ylabel("Prices", fontsize=20)
+
+plt.figure(figsize=(10,4))
+plt.plot(closing_pct_changes)
+plt.ylabel("Closing Price Changes", fontsize=20)
+
+from statsmodels.graphics.tsaplots import plot_acf
+import matplotlib.pyplot as plt
+
+#Autocorrelation
+plot_acf(closing_pct_changes)
+plt.show()
+
+#Partial Autocorrelation
+plot_pacf(closing_pct_changes)
+plt.show()
+
+#Open price graph
+nse_data['Open'].plot(figsize=(12,8))
+
+#Closing Price Graph
+nse_data['Close'].plot(figsize=(12,8))
+
+
+#Plot for Opening And Closing prices Graph Together
+# Extract x-axis values from two columns
+x1 = nse_data['Open']
+x2 = nse_data['Close']
+
+
+
+# Create a line plot with two x-axis values
+fig, ax = plt.subplots()
+ax.plot(x1, label='Open')
+ax.plot(x2, label='Close')
+
+# Set the title and legend
+ax.set_title('Plot of Two Columns')
+ax.legend()
+
+# Display the plot
+plt.show()
+
+
+#AMRA(5,5) Model
+for thresh in [0,0.001,0.005]:
+    run_simulation(closing_pct_changes,closing_prices,100,(5,0,5),thresh,verbose=False)
+    plt.plot(closing_pct_changes, label=f'threshold={thresh}') # Plot results
+plt.title('Threshold buying simulation results')
+plt.xlabel('Trading days')
+plt.ylabel('Portfolio value')
+plt.legend()
+plt.show()
