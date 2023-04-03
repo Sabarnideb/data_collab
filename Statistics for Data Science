@@ -1,0 +1,123 @@
+import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+boston_url = 'https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBMDeveloperSkillsNetwork-ST0151EN-SkillsNetwork/labs/boston_housing.csv'
+boston_df=pd.read_csv(boston_url)
+print(boston_df)
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Display a Boxplot for the "Median value of owner-occupied homes in $1000's" column.
+box = sns.boxplot(y = 'MEDV', data = boston_df)
+box.set(ylabel = "Median value of owner-occupied homes in $1000's"
+        , xlabel = "Boxplot"
+        , title = "Boxplot for Median value of owner-occupied homes")
+        
+!mamba install seaborn=0.9.0-y
+import seaborn as sns
+#Bar Graph for Charles River dummy variable
+bar = sns.distplot(boston_df['CHAS'])
+bar.set(ylabel = "Charles River dummy variable",
+        xlabel = "Frequency for Charles river variable",
+        title = "Barplot for Median value of owner-occupied homes")
+plt.show()
+
+# Grouping the data
+boston_df.loc[(boston_df['AGE'] <= 35), 'AGE_group'] = '35 years and younger'
+boston_df.loc[(boston_df['AGE'] > 35)&(boston_df['AGE'] < 70), 'AGE_group'] = 'between 35 and 70 years'
+boston_df.loc[(boston_df['AGE'] >= 70), 'AGE_group'] = '70 years and older'
+
+#boxplot MEDV vs AGE
+sns.boxplot(x="AGE_group", y="MEDV", data=  boston_df)
+import matplotlib.pyplot as plt
+plt.show()
+
+#create scatter plot Nitric oxide concentrations and the proportion of non-retail business acres per town
+
+plt.scatter(boston_df['NOX'], boston_df['INDUS'])
+
+# Set axis labels
+plt.xlabel('Nitric oxide concentrations')
+plt.ylabel('The proportion of non-retail business acres per town')
+
+# Set plot title
+plt.title('Scatter plot of NOX vs INDUS')
+
+# Display plot
+plt.show()
+
+
+# Create a histogram for the pupil to teacher ratio variable
+
+sns.histplot(data=boston_df, x='PTRATIO')
+
+# Set axis labels
+plt.xlabel('The pupil to teacher ratio variable')
+
+
+# Set plot title
+plt.title('Histogram of pupil to teacher ratio variable')
+
+# Display plot
+plt.show()
+
+
+import scipy.stats
+###Is there a significant difference in median value of houses bounded by the Charles river or not? (T-test for independent samples)?
+State the hypothesis
+𝐻0:µ1=µ2("There is no difference in median value of houses bounded by the Charles river")
+𝐻1:µ1≠µ2("There is a difference in median value of houses bounded by the Charles river")
+
+scipy.stats.ttest_ind(boston_df['MEDV'], boston_df['CHAS'])
+###Is there a difference in Median values of houses (MEDV) for each proportion of owner occupied units built prior to 1940 (AGE)? (ANOVA)
+
+# Grouping the data
+boston_df.loc[(boston_df['AGE'] <= 30), 'AGE_group'] = '35 years and younger'
+boston_df.loc[(boston_df['AGE'] > 30)&(boston_df['AGE'] < 70), 'AGE_group'] = 'between 35 and 70 years'
+boston_df.loc[(boston_df['AGE'] >= 70), 'AGE_group'] = '70 years and older'
+
+###State the hypothesis
+𝐻0 : "All groups have same mean."
+𝐻1 : "Atleast one of the mean is different."
+
+thirtyfive_lower = boston_df[boston_df['AGE_group'] == "30 years and younger"]['MEDV']
+thirtyfive_seventy = boston_df[boston_df['AGE_group'] == "Between 30 and 70 years"]['MEDV']
+seventy_older = boston_df[boston_df['AGE_group'] == "70 years and older"]['MEDV']
+
+scipy.stats.f_oneway(thirtyfive_lower, thirtyfive_seventy, seventy_older)
+##Can we conclude that there is no relationship between Nitric oxide concentrations and proportion of non-retail business acres per town? (Pearson Correlation)¶
+
+from scipy.stats import pearsonr
+x=boston_df["NOX"]
+y=boston_df["INDUS"]
+
+# Calculate Pearson correlation coefficient and p-value
+corr, p_value = pearsonr(x,y)
+
+# Print the results
+print(f"Pearson correlation coefficient: {corr}")
+print(f"P-value: {p_value}")
+
+###What is the impact of an additional weighted distance to the five Boston employment centres on the median value of owner occupied homes? (Regression analysis)
+Regression with T-test
+We will state the null hypothesis:
+*𝐻0:β1=0 (There is no impact of an additional weighted distance to the five Boston employment centres on the median value of owner occupied homes)
+
+*𝐻1:β1 is not equal to 0 (There is an impact of an additional weighted distance to the five Boston employment centres on the median value of owner occupied homes)
+
+## X is the input variables (or independent variables)
+X = boston_df['DIS']
+
+## y is the target/dependent variable
+y = boston_df['MEDV']
+
+## add an intercept (beta_0) to our model
+X = sm.add_constant(X) 
+
+model = sm.OLS(y, X).fit()
+predictions = model.predict(X)
+
+# Print out the statistics
+model.summary()
+
